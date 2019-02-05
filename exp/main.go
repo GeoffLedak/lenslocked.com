@@ -1,9 +1,12 @@
 package main
 
 import (
-	"database/sql"
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
 )
 
@@ -14,30 +17,43 @@ const (
 	dbname = "lenslocked_dev"
 )
 
+type User struct {
+	gorm.Model
+	Name  string
+	Email string `gorm:"not null;unique_index"`
+}
+
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
 		host, port, user, dbname)
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := gorm.Open("postgres", psqlInfo)
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
+	db.LogMode(true)
 
-	var id int
-	var name, email string
-	rows, err := db.Query(`
-    SELECT id, name, email
-    FROM users
-    WHERE email = $1
-    OR ID > $2`,
-		"jon@calhoun.io", 3)
-	if err != nil {
+	db.AutoMigrate(&User{})
+
+	name, email := getInfo()
+	u := &User{
+		Name:  name,
+		Email: email,
+	}
+	if err = db.Create(u).Error; err != nil {
 		panic(err)
 	}
+	fmt.Printf("%+v\n", u)
+}
 
-	for rows.Next() {
-		rows.Scan(&id, &name, &email)
-		fmt.Println("ID:", id, "Name:", name, "Email:", email)
-	}
-	db.Close()
+func getInfo() (name, email string) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("What is your name?")
+	name, _ = reader.ReadString('\n')
+	name = strings.TrimSpace(name)
+	fmt.Println("What is your email?")
+	email, _ = reader.ReadString('\n')
+	email = strings.TrimSpace(email)
+	return name, email
 }
