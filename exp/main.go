@@ -25,13 +25,23 @@ func main() {
 		panic(err)
 	}
 	defer us.Close()
+
+	// This will reset the database on every run, but is fine
+	// for testing things out.
 	us.DestructiveReset()
 
-	// This will error because you DO NOT have a user with
-	// this ID, but we will create one soon.
-	user, err := us.ByID(1)
+	// Create a user
+	user := models.User{
+		Name:  "Michael Scott",
+		Email: "michael@dundermifflin.com",
+	}
+	if err := us.Create(&user); err != nil {
+		panic(err)
+	}
+
+	foundUser, err := us.ByID(1)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(user)
+	fmt.Println(foundUser)
 }
