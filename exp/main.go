@@ -12,7 +12,7 @@ const (
 	host     = "localhost"
 	port     = 5432
 	user     = "postgres"
-	password = "P12RaspberryJam"
+	password = "your-password"
 	dbname   = "lenslocked_dev"
 )
 
