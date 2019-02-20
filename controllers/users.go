@@ -92,5 +92,3 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 	fmt.Fprintln(w, user)
 }
-
-// sandwiches
