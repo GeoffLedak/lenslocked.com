@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 
+	"lenslocked.com/rand"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"golang.org/x/crypto/bcrypt"
@@ -27,6 +29,8 @@ type User struct {
 	Email        string `gorm:"not null;unique_index"`
 	Password     string `gorm:"-"`
 	PasswordHash string `gorm:"not null"`
+	Remember     string `gorm:"-"`
+	RememberHash string `gorm:"not null;unique_index"`
 }
 
 type UserService struct {
@@ -123,6 +127,15 @@ func (us *UserService) Create(user *User) error {
 
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
+
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+	}
+	// TODO: Hash the token and set it on user.RememberHash
 
 	return us.db.Create(user).Error
 }
