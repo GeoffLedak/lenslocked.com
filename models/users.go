@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 
+	"lenslocked.com/hash"
 	"lenslocked.com/rand"
 
 	"github.com/jinzhu/gorm"
@@ -34,8 +35,11 @@ type User struct {
 }
 
 type UserService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	hmac hash.HMAC
 }
+
+const hmacSecretKey = "secret-hmac-key"
 
 func NewUserService(connectionInfo string) (*UserService, error) {
 	db, err := gorm.Open("postgres", connectionInfo)
@@ -43,8 +47,10 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 		return nil, err
 	}
 	db.LogMode(true)
+	hmac := hash.NewHMAC(hmacSecretKey)
 	return &UserService{
-		db: db,
+		db:   db,
+		hmac: hmac,
 	}, nil
 }
 
