@@ -102,6 +102,20 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	return &user, err
 }
 
+// ByRemember looks up a user with the given remember token
+// and returns that user. This method will handle hashing
+// the token for us.
+// Errors are the same as ByEmail.
+func (us *UserService) ByRemember(token string) (*User, error) {
+	var user User
+	rememberHash := us.hmac.Hash(token)
+	err := first(us.db.Where("remember_hash = ?", rememberHash), &user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // AutoMigrate will attempt to automatically migrate the
 // users table
 func (us *UserService) AutoMigrate() error {
