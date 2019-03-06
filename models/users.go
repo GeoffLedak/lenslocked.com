@@ -205,5 +205,3 @@ func (us *UserService) Authenticate(email, password string) (*User, error) {
 		return nil, err
 	}
 }
-
-//sandwiches
