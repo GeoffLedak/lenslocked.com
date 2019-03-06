@@ -43,3 +43,5 @@ func main() {
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 	http.ListenAndServe(":3000", r)
 }
+
+// sandwiches
