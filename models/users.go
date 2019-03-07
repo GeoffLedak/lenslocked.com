@@ -11,7 +11,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var userPwPepper = "I-like-cheese"
+const (
+	userPwPepper  = "I-like-cheese"
+	hmacSecretKey = "secret-hmac-key"
+)
 
 var (
 	// ErrNotFound is returned when a resource cannot be found in the database.
@@ -55,10 +58,73 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
-// userGorm represents our database interaction layer
-// and implements the UserDB interface fully.
-type userGorm struct {
-	db *gorm.DB
+type User struct {
+	gorm.Model
+	Name         string
+	Email        string `gorm:"not null;unique_index"`
+	Password     string `gorm:"-"`
+	PasswordHash string `gorm:"not null"`
+	Remember     string `gorm:"-"`
+	RememberHash string `gorm:"not null;unique_index"`
+}
+
+// UserService is a set of methods used to manipulate and
+// work with the user model
+type UserService interface {
+	// Authenticate will verify the provided email address and
+	// password are correct. If they are correct, the user
+	// corresponding to that email will be returned. Otherwise
+	// You will receive either:
+	// ErrNotFound, ErrInvalidPassword, or another error if
+	// something goes wrong.
+	Authenticate(email, password string) (*User, error)
+	UserDB
+}
+
+func NewUserService(connectionInfo string) (UserService, error) {
+	ug, err := newUserGorm(connectionInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	hmac := hash.NewHMAC(hmacSecretKey)
+	uv := &userValidator{
+		hmac:   hmac,
+		UserDB: ug,
+	}
+
+	return &userService{
+		UserDB: uv,
+	}, nil
+}
+
+type userService struct {
+	UserDB
+}
+
+// Authenticate can be used to authenticate a user with the provided email address and password.
+// If the email address provided is invalid, this will return nil, ErrNotFound
+// If the password provided is invalid, this will return nil, ErrInvalidPassword
+// If the email and password are both valid, this will return user, nil
+// Otherwise if another error is encountered this will return nil, error
+func (us *userService) Authenticate(email, password string) (*User, error) {
+
+	foundUser, err := us.ByEmail(email)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPwPepper))
+
+	switch err {
+	case nil:
+		return foundUser, nil
+	case bcrypt.ErrMismatchedHashAndPassword:
+		return nil, ErrInvalidPassword
+	default:
+		return nil, err
+	}
 }
 
 func newUserGorm(connectionInfo string) (*userGorm, error) {
@@ -71,6 +137,12 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 	return &userGorm{
 		db: db,
 	}, nil
+}
+
+// userGorm represents our database interaction layer
+// and implements the UserDB interface fully.
+type userGorm struct {
+	db *gorm.DB
 }
 
 // ByID will look up a user with the provided ID.
@@ -118,19 +190,25 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 	return &user, nil
 }
 
+// Create will create the provided user and backfill data
+// like the ID, CreatedAt, and UpdatedAt fields.
 func (ug *userGorm) Create(user *User) error {
 	return ug.db.Create(user).Error
 }
 
+// Update will update the provided user with all of the data
+// in the provided user object.
 func (ug *userGorm) Update(user *User) error {
 	return ug.db.Save(user).Error
 }
 
+// Delete will delete the user with the provided ID
 func (ug *userGorm) Delete(id uint) error {
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
 }
 
+// Closes the UserService database connection
 func (ug *userGorm) Close() error {
 	return ug.db.Close()
 }
@@ -153,52 +231,6 @@ func (ug *userGorm) DestructiveReset() error {
 	return ug.AutoMigrate()
 }
 
-type User struct {
-	gorm.Model
-	Name         string
-	Email        string `gorm:"not null;unique_index"`
-	Password     string `gorm:"-"`
-	PasswordHash string `gorm:"not null"`
-	Remember     string `gorm:"-"`
-	RememberHash string `gorm:"not null;unique_index"`
-}
-
-// UserService is a set of methods used to manipulate and
-// work with the user model
-type UserService interface {
-	// Authenticate will verify the provided email address and
-	// password are correct. If they are correct, the user
-	// corresponding to that email will be returned. Otherwise
-	// You will receive either:
-	// ErrNotFound, ErrInvalidPassword, or another error if
-	// something goes wrong.
-	Authenticate(email, password string) (*User, error)
-	UserDB
-}
-
-type userService struct {
-	UserDB
-}
-
-const hmacSecretKey = "secret-hmac-key"
-
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := newUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := &userValidator{
-		hmac:   hmac,
-		UserDB: ug,
-	}
-
-	return &userService{
-		UserDB: uv,
-	}, nil
-}
-
 // first will query using the provided gorm.DB and it will
 // get the first item returned and place it into dst. If
 // nothing is found in the query, it will return ErrNotFound
@@ -210,31 +242,6 @@ func first(db *gorm.DB, dst interface{}) error {
 	return err
 }
 
-// Authenticate can be used to authenticate a user with the provided email address and password.
-// If the email address provided is invalid, this will return nil, ErrNotFound
-// If the password provided is invalid, this will return nil, ErrInvalidPassword
-// If the email and password are both valid, this will return user, nil
-// Otherwise if another error is encountered this will return nil, error
-func (us *userService) Authenticate(email, password string) (*User, error) {
-
-	foundUser, err := us.ByEmail(email)
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPwPepper))
-
-	switch err {
-	case nil:
-		return foundUser, nil
-	case bcrypt.ErrMismatchedHashAndPassword:
-		return nil, ErrInvalidPassword
-	default:
-		return nil, err
-	}
-}
-
 // userValidator is our validation layer that validates
 // and normalizes data before passing it on to the next
 // UserDB in our interface chain.
@@ -243,8 +250,6 @@ type userValidator struct {
 	hmac hash.HMAC
 }
 
-// ByRemember will hash the remember token and then call
-// ByRemember on the subsequent UserDB layer.
 func (uv *userValidator) ByRemember(token string) (*User, error) {
 	rememberHash := uv.hmac.Hash(token)
 	return uv.UserDB.ByRemember(rememberHash)
@@ -253,14 +258,11 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 // Create will create the provided user and backfill data
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (uv *userValidator) Create(user *User) error {
-	pwBytes := []byte(user.Password + userPwPepper)
-	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes,
-		bcrypt.DefaultCost)
-	if err != nil {
+
+	if err := runUserValFns(user,
+		uv.bcryptPassword); err != nil {
 		return err
 	}
-	user.PasswordHash = string(hashedBytes)
-	user.Password = ""
 
 	if user.Remember == "" {
 		token, err := rand.RememberToken()
@@ -275,6 +277,12 @@ func (uv *userValidator) Create(user *User) error {
 
 // Update will hash a remember token if it is provided.
 func (uv *userValidator) Update(user *User) error {
+
+	if err := runUserValFns(user,
+		uv.bcryptPassword); err != nil {
+		return err
+	}
+
 	if user.Remember != "" {
 		user.RememberHash = uv.hmac.Hash(user.Remember)
 	}
@@ -287,4 +295,36 @@ func (uv *userValidator) Delete(id uint) error {
 		return ErrInvalidID
 	}
 	return uv.UserDB.Delete(id)
+}
+
+func runUserValFns(user *User, fns ...userValFn) error {
+	for _, fn := range fns {
+		if err := fn(user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type userValFn func(*User) error
+
+// bcryptPassword will hash a user's password with an
+// app-wide pepper and bcrypt, which salts for us.
+func (uv *userValidator) bcryptPassword(user *User) error {
+
+	if user.Password == "" {
+		// We DO NOT need to run this if the password
+		// hasn't been changed.
+		return nil
+	}
+
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes,
+		bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
+	return nil
 }
