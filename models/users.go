@@ -201,19 +201,33 @@ type User struct {
 	RememberHash string `gorm:"not null;unique_index"`
 }
 
-type UserService struct {
+// UserService is a set of methods used to manipulate and
+// work with the user model
+type UserService interface {
+	// Authenticate will verify the provided email address and
+	// password are correct. If they are correct, the user
+	// corresponding to that email will be returned. Otherwise
+	// You will receive either:
+	// ErrNotFound, ErrInvalidPassword, or another error if
+	// something goes wrong.
+	Authenticate(email, password string) (*User, error)
+	UserDB
+}
+
+type userService struct {
 	UserDB
 }
 
 const hmacSecretKey = "secret-hmac-key"
 
-func NewUserService(connectionInfo string) (*UserService, error) {
+func NewUserService(connectionInfo string) (UserService, error) {
 	ug, err := newUserGorm(connectionInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &UserService{
-		UserDB: userValidator{
+
+	return &userService{
+		UserDB: &userValidator{
 			UserDB: ug,
 		},
 	}, nil
@@ -235,7 +249,7 @@ func first(db *gorm.DB, dst interface{}) error {
 // If the password provided is invalid, this will return nil, ErrInvalidPassword
 // If the email and password are both valid, this will return user, nil
 // Otherwise if another error is encountered this will return nil, error
-func (us *UserService) Authenticate(email, password string) (*User, error) {
+func (us *userService) Authenticate(email, password string) (*User, error) {
 
 	foundUser, err := us.ByEmail(email)
 
