@@ -33,6 +33,9 @@ var (
 
 	// ErrEmailInvalid is returned when an email address provided does not match any of our requirements
 	ErrEmailInvalid = errors.New("models: email address is not valid")
+
+	// ErrEmailTaken is returned when an update or create is attempted with an email address that is already in use.
+	ErrEmailTaken = errors.New("models: email address is already taken")
 )
 
 // UserDB is used to interact with the users database.
@@ -295,7 +298,8 @@ func (uv *userValidator) Create(user *User) error {
 		uv.hmacRemember,
 		uv.normalizeEmail,
 		uv.requireEmail,
-		uv.emailFormat)
+		uv.emailFormat,
+		uv.emailIsAvail)
 	if err != nil {
 		return err
 	}
@@ -309,7 +313,8 @@ func (uv *userValidator) Update(user *User) error {
 		uv.hmacRemember,
 		uv.normalizeEmail,
 		uv.requireEmail,
-		uv.emailFormat)
+		uv.emailFormat,
+		uv.emailIsAvail)
 	if err != nil {
 		return err
 	}
@@ -407,6 +412,29 @@ func (uv *userValidator) emailFormat(user *User) error {
 	}
 	if !uv.emailRegex.MatchString(user.Email) {
 		return ErrEmailInvalid
+	}
+	return nil
+}
+
+func (uv *userValidator) emailIsAvail(user *User) error {
+	existing, err := uv.ByEmail(user.Email)
+	if err == ErrNotFound {
+		// Email address is available if we don't find
+		// a user with that email address.
+		return nil
+	}
+	// We can't continue our validation without a successful
+	// query, so if we get any error other than ErrNotFound we
+	// should return it.
+	if err != nil {
+		return err
+	}
+
+	// If we get here that means we found a user w/ this email
+	// address, so we need to see if this is the same user we
+	// are updating, or if we have a conflict.
+	if user.ID != existing.ID {
+		return ErrEmailTaken
 	}
 	return nil
 }
