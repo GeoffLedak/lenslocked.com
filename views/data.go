@@ -1,5 +1,7 @@
 package views
 
+import "log"
+
 const (
 	AlertLvlError   = "danger"
 	AlertLvlWarning = "warning"
@@ -17,8 +19,27 @@ type Data struct {
 	Yield interface{}
 }
 
+func (d *Data) SetAlert(err error) {
+	var msg string
+	if pErr, ok := err.(PublicError); ok {
+		msg = pErr.Public()
+	} else {
+		log.Println(err)
+		msg = AlertMsgGeneric
+	}
+	d.Alert = &Alert{
+		Level:   AlertLvlError,
+		Message: msg,
+	}
+}
+
 // Alert is used to render Bootstrap Alert messages in templates
 type Alert struct {
 	Level   string
 	Message string
+}
+
+type PublicError interface {
+	error
+	Public() string
 }
