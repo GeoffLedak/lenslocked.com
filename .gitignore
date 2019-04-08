@@ -12,3 +12,34 @@
 *.out
 
 *.DS_Store
+
+
+
+
+**/.idea/workspace.xml
+
+# mac hidden files
+.DS_Store
+
+#other
+node_modules/
+bower_components/
+.tmp
+.sass-cache
+builds/**/images/*
+*.ogg
+*.mp3
+*.mp4
+#*.png
+#*.jpeg
+
+# security / ssl
+*.pem
+*.xxjson
+
+
+# Anything under a tmp folder
+**/tmp/*
+
+# Uploaded images
+images/**
