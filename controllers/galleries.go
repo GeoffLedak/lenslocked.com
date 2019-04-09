@@ -229,8 +229,7 @@ func (g *Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 // galleryByID will return an error if one occurs, but it
 // will also render the error with an http.Error function
 // call, so you do not need to.
-func (g *Galleries) galleryByID(w http.ResponseWriter,
-	r *http.Request) (*models.Gallery, error) {
+func (g *Galleries) galleryByID(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := strconv.Atoi(idStr)
@@ -248,5 +247,7 @@ func (g *Galleries) galleryByID(w http.ResponseWriter,
 		}
 		return nil, err
 	}
+	images, _ := g.is.ByGalleryID(gallery.ID)
+	gallery.Images = images
 	return gallery, nil
 }

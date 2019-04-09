@@ -9,6 +9,7 @@ import (
 
 type ImageService interface {
 	Create(galleryID uint, r io.Reader, filename string) error
+	ByGalleryID(galleryID uint) ([]string, error)
 }
 
 func NewImageService() ImageService {
@@ -36,8 +37,24 @@ func (is *imageService) Create(galleryID uint, r io.Reader, filename string) err
 	return nil
 }
 
+func (is *imageService) ByGalleryID(galleryID uint) ([]string, error) {
+	path := is.imagePath(galleryID)
+	strings, err := filepath.Glob(filepath.Join(path, "*"))
+	if err != nil {
+		return nil, err
+	}
+	return strings, nil
+}
+
+// Going to need this when we know it is already made
+func (is *imageService) imagePath(galleryID uint) string {
+	return filepath.Join("images", "galleries",
+		fmt.Sprintf("%v", galleryID))
+}
+
+// Use the imagePath method we just made
 func (is *imageService) mkImagePath(galleryID uint) (string, error) {
-	galleryPath := filepath.Join("images", "galleries", fmt.Sprintf("%v", galleryID))
+	galleryPath := is.imagePath(galleryID)
 	err := os.MkdirAll(galleryPath, 0755)
 	if err != nil {
 		return "", err
