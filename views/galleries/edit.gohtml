@@ -79,23 +79,38 @@
 {{end}}
 
 {{define "galleryImages"}}
-{{range .ImagesSplitN 6}}
-  <div class="col-md-2">
-    {{range .}}
-      <a href="{{.}}">
-        <img src="{{.}}" class="thumbnail">
-      </a>
-    {{end}}
-  </div>
+  {{range .ImagesSplitN 6}}
+    <div class="col-md-2">
+      {{range .}}
+        <a href="{{.Path}}">
+          <img src="{{.Path}}" class="thumbnail">
+        </a>
+        {{template "deleteImageForm" .}}
+      {{end}}
+    </div>
+  {{end}}
+   <!--
+  Normally styles in the middle of your code is bad,
+  but for dev I think this is fine. We will fix it up
+  when we deploy
+  -->
+
+  <style>
+    .thumbnail {
+      width: 100%;
+      margin-bottom: 6px;
+    }
+    .btn-delete {
+      margin-bottom: 6px;
+    }
+  </style>
 {{end}}
-<!--
-Normally styles in the middle of your code is bad,
-but for dev I think this is fine. We will fix it up
-when we deploy
--->
-<style>
-  .thumbnail {
-    width: 100%;
-  }
-</style>
+
+{{define "deleteImageForm"}}
+<form action="/galleries/{{.GalleryID}}/images/{{.Filename}}/delete"
+  method="POST">
+  <button type="submit" class="btn btn-default btn-delete">
+    Delete
+  </button>
+</form>
 {{end}}
