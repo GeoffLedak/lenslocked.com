@@ -76,11 +76,7 @@
 {{end}}
 
 {{define "galleryImages"}}
-<ul>
-  {{range .Images}}
-    <li>
-      {{.}}
-    </li>
-  {{end}}
-</ul>
+{{range .Images}}
+  <img src="{{.}}">
+{{end}}
 {{end}}
