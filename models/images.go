@@ -26,7 +26,7 @@ func (i *Image) Path() string {
 func (i *Image) RelativePath() string {
 	// Convert the gallery ID to a string
 	galleryID := fmt.Sprintf("%v", i.GalleryID)
-	return filepath.Join("images", "galleries", galleryID, i.Filename)
+	return filepath.ToSlash(filepath.Join("images", "galleries", galleryID, i.Filename))
 }
 
 type ImageService interface {
