@@ -5,18 +5,60 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
-func NewServices(dialect, connectionInfo string) (*Services, error) {
-	db, err := gorm.Open(dialect, connectionInfo)
-	if err != nil {
-		return nil, err
+type ServicesConfig func(*Services) error
+
+func WithGorm(dialect, connectionInfo string) ServicesConfig {
+	return func(s *Services) error {
+		db, err := gorm.Open(dialect, connectionInfo)
+		if err != nil {
+			return err
+		}
+		s.db = db
+		return nil
 	}
-	db.LogMode(true)
-	return &Services{
-		User:    NewUserService(db),
-		Gallery: NewGalleryService(db),
-		Image:   NewImageService(),
-		db:      db,
-	}, nil
+}
+
+func WithLogMode(mode bool) ServicesConfig {
+	return func(s *Services) error {
+		s.db.LogMode(mode)
+		return nil
+	}
+}
+
+func WithUser(pepper, hmacKey string) ServicesConfig {
+	return func(s *Services) error {
+		s.User = NewUserService(s.db, pepper, hmacKey)
+		return nil
+	}
+}
+
+func WithGallery() ServicesConfig {
+	return func(s *Services) error {
+		s.Gallery = NewGalleryService(s.db)
+		return nil
+	}
+}
+
+func WithImage() ServicesConfig {
+	return func(s *Services) error {
+		s.Image = NewImageService()
+		return nil
+	}
+}
+
+// NewServices now will accept a list of config functions to
+// run. Each function will accept a pointer to the current
+// Services object as its only argument and will edit that
+// object inline and return an error if there is one. Once
+// we have run all configs we will return the Services object.
+func NewServices(cfgs ...ServicesConfig) (*Services, error) {
+	var s Services
+	for _, cfg := range cfgs {
+		if err := cfg(&s); err != nil {
+			return nil, err
+		}
+	}
+	return &s, nil
 }
 
 type Services struct {
