@@ -3,7 +3,9 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"lenslocked.com/context"
 	"lenslocked.com/models"
 	"lenslocked.com/rand"
 	"lenslocked.com/views"
@@ -108,6 +110,32 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/galleries", http.StatusFound)
 
+}
+
+// Logout is used to delete a user's session cookie
+// and invalidate their current remember token, which will
+// sign the current user out.
+//
+// POST /logout
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	// First expire the user's cookie
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    "",
+		Expires:  time.Now(),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+	// Then we update the user with a new remember token
+	user := context.User(r.Context())
+	// We are ignoring errors for now because they are
+	// unlikely, and even if they do occur we can't recover
+	// now that the user doesn't have a valid cookie
+	token, _ := rand.RememberToken()
+	user.Remember = token
+	u.us.Update(user)
+	// Finally send the user to the home page
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // CookieTest is used to display cookies set on the current user
