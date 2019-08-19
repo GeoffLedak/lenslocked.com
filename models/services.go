@@ -1,8 +1,13 @@
 package models
 
 import (
+	"context"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type ServicesConfig func(*Services) error
@@ -14,6 +19,18 @@ func WithGorm(dialect, connectionInfo string) ServicesConfig {
 			return err
 		}
 		s.db = db
+		return nil
+	}
+}
+
+func WithMongo() ServicesConfig {
+	return func(s *Services) error {
+		clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+		mongo, err := mongo.Connect(context.TODO(), clientOptions)
+		if err != nil {
+			return err
+		}
+		s.mongo = mongo
 		return nil
 	}
 }
@@ -66,6 +83,7 @@ type Services struct {
 	User    UserService
 	Image   ImageService
 	db      *gorm.DB
+	mongo   *mongo.Client
 }
 
 // Closes the database connection
