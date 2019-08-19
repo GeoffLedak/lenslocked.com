@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"lenslocked.com/hash"
 	"lenslocked.com/rand"
 
@@ -43,6 +45,18 @@ const (
 	// ErrRememberTooShort is returned when a remember token is not at least 32 bytes
 	ErrRememberTooShort modelError = "models: remember token must be at least 32 bytes"
 )
+
+type UserMongoDB interface {
+
+	// ===== PUT METHOD DECLARATIONS HERE!!! =====
+
+	// ByID(id uint) (*User, error)
+	// ByEmail(email string) (*User, error)
+	// etc...
+
+	// Then actually implement the methods
+
+}
 
 // UserDB is used to interact with the users database.
 //
@@ -91,10 +105,11 @@ type UserService interface {
 	UserDB
 }
 
-func NewUserService(db *gorm.DB, pepper, hmacKey string) UserService {
+func NewUserService(db *gorm.DB, mongo *mongo.Client, pepper, hmacKey string) UserService {
 	ug := &userGorm{db}
+	um := &userMongo{mongo}
 	hmac := hash.NewHMAC(hmacKey)
-	uv := newUserValidator(ug, hmac, pepper)
+	uv := newUserValidator(ug, um, hmac, pepper)
 	return &userService{
 		UserDB: uv,
 		pepper: pepper,
@@ -106,11 +121,12 @@ type userService struct {
 	pepper string
 }
 
-func newUserValidator(udb UserDB, hmac hash.HMAC, pepper string) *userValidator {
+func newUserValidator(udb UserDB, umdb UserMongoDB, hmac hash.HMAC, pepper string) *userValidator {
 	return &userValidator{
-		UserDB: udb,
-		hmac:   hmac,
-		pepper: pepper,
+		UserDB:      udb,
+		UserMongoDB: umdb,
+		hmac:        hmac,
+		pepper:      pepper,
 		emailRegex: regexp.MustCompile(
 			`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
 	}
@@ -139,6 +155,10 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 	default:
 		return nil, err
 	}
+}
+
+type userMongo struct {
+	mongo *mongo.Client
 }
 
 // userGorm represents our database interaction layer
@@ -226,6 +246,7 @@ func first(db *gorm.DB, dst interface{}) error {
 // UserDB in our interface chain.
 type userValidator struct {
 	UserDB
+	UserMongoDB
 	hmac       hash.HMAC
 	emailRegex *regexp.Regexp
 	pepper     string

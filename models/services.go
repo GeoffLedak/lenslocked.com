@@ -44,7 +44,7 @@ func WithLogMode(mode bool) ServicesConfig {
 
 func WithUser(pepper, hmacKey string) ServicesConfig {
 	return func(s *Services) error {
-		s.User = NewUserService(s.db, pepper, hmacKey)
+		s.User = NewUserService(s.db, s.mongo, pepper, hmacKey)
 		return nil
 	}
 }
