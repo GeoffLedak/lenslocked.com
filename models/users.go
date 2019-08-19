@@ -111,13 +111,15 @@ func NewUserService(db *gorm.DB, mongo *mongo.Client, pepper, hmacKey string) Us
 	hmac := hash.NewHMAC(hmacKey)
 	uv := newUserValidator(ug, um, hmac, pepper)
 	return &userService{
-		UserDB: uv,
-		pepper: pepper,
+		UserDB:      uv,
+		UserMongoDB: uv, // ====!!!! WHY DOES THIS WORK??? ===== !!!!
+		pepper:      pepper,
 	}
 }
 
 type userService struct {
 	UserDB
+	UserMongoDB
 	pepper string
 }
 
