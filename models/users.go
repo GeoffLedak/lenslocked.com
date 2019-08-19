@@ -287,6 +287,9 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
+// This appears to be unused
+
+/*
 // Create will create the provided user and backfill data
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (uv *userValidator) Create(user *User) error {
@@ -310,6 +313,7 @@ func (uv *userValidator) Create(user *User) error {
 	return uv.UserDB.Create(user) // !!!! ==== UPDATE THIS ==== !!!!!
 	// !!!! ==== UPDATE THIS ==== !!!!!
 }
+*/
 
 // Update will hash a remember token if it is provided.
 func (uv *userValidator) Update(user *User) error {
