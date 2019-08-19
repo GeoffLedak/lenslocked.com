@@ -61,11 +61,22 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		Email:    form.Email,
 		Password: form.Password,
 	}
+
 	if err := u.us.Create(&user); err != nil {
+		// vd.SetAlert(err)
+		// u.NewView.Render(w, r, vd)
+		// return
+	}
+
+	// remote return from if statement above,
+	// and add u.us.CreateMongo call
+
+	if err := u.us.CreateMongo(&user); err != nil {
 		vd.SetAlert(err)
 		u.NewView.Render(w, r, vd)
 		return
 	}
+
 	err := u.signIn(w, &user)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusFound)

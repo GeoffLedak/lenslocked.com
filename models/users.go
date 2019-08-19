@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"regexp"
 	"strings"
 
@@ -56,6 +57,7 @@ type UserMongoDB interface {
 
 	// Then actually implement the methods
 
+	CreateMongo(user *User) error
 }
 
 // UserDB is used to interact with the users database.
@@ -103,6 +105,7 @@ type UserService interface {
 	// something goes wrong.
 	Authenticate(email, password string) (*User, error)
 	UserDB
+	UserMongoDB
 }
 
 func NewUserService(db *gorm.DB, mongo *mongo.Client, pepper, hmacKey string) UserService {
@@ -112,7 +115,7 @@ func NewUserService(db *gorm.DB, mongo *mongo.Client, pepper, hmacKey string) Us
 	uv := newUserValidator(ug, um, hmac, pepper)
 	return &userService{
 		UserDB:      uv,
-		UserMongoDB: uv, // ====!!!! WHY DOES THIS WORK??? ===== !!!!
+		UserMongoDB: uv,
 		pepper:      pepper,
 	}
 }
@@ -161,6 +164,13 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 
 type userMongo struct {
 	mongo *mongo.Client
+}
+
+func (um *userMongo) CreateMongo(user *User) error {
+	collection := um.mongo.Database("lenslocked_dev").Collection("users")
+	_, err := collection.InsertOne(context.TODO(), user)
+
+	return err
 }
 
 // userGorm represents our database interaction layer
@@ -296,7 +306,9 @@ func (uv *userValidator) Create(user *User) error {
 	if err != nil {
 		return err
 	}
-	return uv.UserDB.Create(user)
+	// !!!! ==== UPDATE THIS ==== !!!!!
+	return uv.UserDB.Create(user) // !!!! ==== UPDATE THIS ==== !!!!!
+	// !!!! ==== UPDATE THIS ==== !!!!!
 }
 
 // Update will hash a remember token if it is provided.
