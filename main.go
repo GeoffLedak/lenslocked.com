@@ -30,7 +30,8 @@ func main() {
 	}
 
 	defer services.Close()
-	services.AutoMigrate()
+
+	// services.AutoMigrate()
 
 	r := mux.NewRouter()
 

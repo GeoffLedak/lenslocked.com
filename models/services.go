@@ -1,26 +1,33 @@
 package models
 
 import (
-	"github.com/jinzhu/gorm"
+	"context"
+
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type ServicesConfig func(*Services) error
 
 func WithGorm(dialect, connectionInfo string) ServicesConfig {
+
 	return func(s *Services) error {
-		db, err := gorm.Open(dialect, connectionInfo)
+		clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+		db, err := mongo.Connect(context.TODO(), clientOptions)
 		if err != nil {
 			return err
 		}
 		s.db = db
 		return nil
 	}
+
 }
 
 func WithLogMode(mode bool) ServicesConfig {
 	return func(s *Services) error {
-		s.db.LogMode(mode)
+		// s.db.LogMode(mode)
 		return nil
 	}
 }
@@ -65,19 +72,23 @@ type Services struct {
 	Gallery GalleryService
 	User    UserService
 	Image   ImageService
-	db      *gorm.DB
+	db      *mongo.Client
 }
 
 // Closes the database connection
 func (s *Services) Close() error {
-	return s.db.Close()
+	// return s.db.Close()
+	return s.db.Disconnect(context.TODO())
 }
 
+/*
 // AutoMigrate will attempt to automatically migrate all tables
 func (s *Services) AutoMigrate() error {
 	return s.db.AutoMigrate(&User{}, &Gallery{}).Error
 }
+*/
 
+/*
 // DestructiveReset drops all tables and rebuilds them
 func (s *Services) DestructiveReset() error {
 	err := s.db.DropTableIfExists(&User{}, &Gallery{}).Error
@@ -86,3 +97,4 @@ func (s *Services) DestructiveReset() error {
 	}
 	return s.AutoMigrate()
 }
+*/

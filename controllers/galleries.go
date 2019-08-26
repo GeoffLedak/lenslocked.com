@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"lenslocked.com/context"
@@ -49,7 +48,7 @@ type GalleryForm struct {
 // GET /galleries
 func (g *Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	user := context.User(r.Context())
-	galleries, err := g.gs.ByUserID(user.ID)
+	galleries, err := g.gs.ByUserID(user.ID.Hex())
 	if err != nil {
 		// We could attempt to display the index page with
 		// no galleries and an error message, but that isn't
@@ -160,7 +159,7 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 
 		// Create the image
-		err = g.is.Create(gallery.ID, file, f.Filename)
+		err = g.is.Create(gallery.ID.Hex(), file, f.Filename)
 		if err != nil {
 			vd.SetAlert(err)
 			g.EditView.Render(w, r, vd)
@@ -190,7 +189,7 @@ func (g *Galleries) ImageDelete(w http.ResponseWriter, r *http.Request) {
 	filename := mux.Vars(r)["filename"]
 	i := models.Image{
 		Filename:  filename,
-		GalleryID: gallery.ID,
+		GalleryID: gallery.ID.Hex(),
 	}
 	err = g.is.Delete(&i)
 	if err != nil {
@@ -229,7 +228,7 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := g.r.Get(EditGallery).URL("id", strconv.Itoa(int(gallery.ID)))
+	url, err := g.r.Get(EditGallery).URL("id", gallery.ID.Hex())
 	if err != nil {
 		// This error shouldn't ever happen unless our routes
 		// are messed up, but just in case I liked to fallback
@@ -255,7 +254,7 @@ func (g *Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var vd views.Data
-	err = g.gs.Delete(gallery.ID)
+	err = g.gs.Delete(gallery.ID.Hex())
 	if err != nil {
 		vd.SetAlert(err)
 		vd.Yield = gallery
@@ -279,16 +278,8 @@ func (g *Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 // call, so you do not need to.
 func (g *Galleries) galleryByID(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
 	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		// This really shouldn't happen with our regex used for
-		// routes with an ID, so we should log the error.
-		log.Println(err)
-		http.Error(w, "Invalid gallery ID", http.StatusNotFound)
-		return nil, err
-	}
-	gallery, err := g.gs.ByID(uint(id))
+	id := vars["id"]
+	gallery, err := g.gs.ByID(id)
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
@@ -301,7 +292,7 @@ func (g *Galleries) galleryByID(w http.ResponseWriter, r *http.Request) (*models
 		}
 		return nil, err
 	}
-	images, _ := g.is.ByGalleryID(gallery.ID)
+	images, _ := g.is.ByGalleryID(gallery.ID.Hex())
 	gallery.Images = images
 	return gallery, nil
 }

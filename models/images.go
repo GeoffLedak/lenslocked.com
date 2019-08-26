@@ -12,7 +12,7 @@ import (
 // Image is NOT stored in the database, and instead
 // references data stored on disk.
 type Image struct {
-	GalleryID uint
+	GalleryID string
 	Filename  string
 }
 
@@ -34,8 +34,8 @@ func (i *Image) RelativePath() string {
 }
 
 type ImageService interface {
-	Create(galleryID uint, r io.Reader, filename string) error
-	ByGalleryID(galleryID uint) ([]Image, error)
+	Create(galleryID string, r io.Reader, filename string) error
+	ByGalleryID(galleryID string) ([]Image, error)
 	Delete(i *Image) error
 }
 
@@ -45,7 +45,7 @@ func NewImageService() ImageService {
 
 type imageService struct{}
 
-func (is *imageService) Create(galleryID uint, r io.Reader, filename string) error {
+func (is *imageService) Create(galleryID string, r io.Reader, filename string) error {
 	path, err := is.mkImagePath(galleryID)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (is *imageService) Delete(i *Image) error {
 	return os.Remove(i.RelativePath())
 }
 
-func (is *imageService) ByGalleryID(galleryID uint) ([]Image, error) {
+func (is *imageService) ByGalleryID(galleryID string) ([]Image, error) {
 	path := is.imagePath(galleryID)
 	strings, err := filepath.Glob(filepath.Join(path, "*"))
 	if err != nil {
@@ -87,12 +87,12 @@ func (is *imageService) ByGalleryID(galleryID uint) ([]Image, error) {
 }
 
 // Going to need this when we know it is already made
-func (is *imageService) imagePath(galleryID uint) string {
+func (is *imageService) imagePath(galleryID string) string {
 	return filepath.Join("images", "galleries", fmt.Sprintf("%v", galleryID))
 }
 
 // Use the imagePath method we just made
-func (is *imageService) mkImagePath(galleryID uint) (string, error) {
+func (is *imageService) mkImagePath(galleryID string) (string, error) {
 	galleryPath := is.imagePath(galleryID)
 	err := os.MkdirAll(galleryPath, 0755)
 	if err != nil {
