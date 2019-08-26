@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"lenslocked.com/hash"
@@ -58,6 +59,7 @@ type UserMongoDB interface {
 	// Then actually implement the methods
 
 	CreateMongo(user *User) error
+	ByEmailMongo(email string) (*User, error)
 }
 
 // UserDB is used to interact with the users database.
@@ -144,7 +146,8 @@ func newUserValidator(udb UserDB, umdb UserMongoDB, hmac hash.HMAC, pepper strin
 // Otherwise if another error is encountered this will return nil, error
 func (us *userService) Authenticate(email, password string) (*User, error) {
 
-	foundUser, err := us.ByEmail(email)
+	// foundUser, err := us.ByEmail(email)
+	foundUser, err := us.ByEmailMongo(email)
 
 	if err != nil {
 		return nil, err
@@ -171,6 +174,16 @@ func (um *userMongo) CreateMongo(user *User) error {
 	_, err := collection.InsertOne(context.TODO(), user)
 
 	return err
+}
+
+func (um *userMongo) ByEmailMongo(email string) (*User, error) {
+	collection := um.mongo.Database("lenslocked_dev").Collection("users")
+
+	var user User
+	filter := bson.D{{"email", email}}
+	err := collection.FindOne(context.TODO(), filter).Decode(&user)
+
+	return &user, err
 }
 
 // userGorm represents our database interaction layer
