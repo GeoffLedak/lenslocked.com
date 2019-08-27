@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"lenslocked.com/context"
 	"lenslocked.com/models"
 	"lenslocked.com/rand"
@@ -49,19 +50,34 @@ type LoginForm struct {
 //
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+
+	fmt.Println("I like cheese 2")
+	// log.Fatal("fucker 2")
+
 	var vd views.Data
 	var form SignupForm
 	if err := parseForm(r, &form); err != nil {
+
+		fmt.Println("tacos")
+
 		vd.SetAlert(err)
 		u.NewView.Render(w, r, vd)
 		return
 	}
 	user := models.User{
-		Name:     form.Name,
-		Email:    form.Email,
-		Password: form.Password,
+		ID:        primitive.NewObjectID(),
+		Name:      form.Name,
+		Email:     form.Email,
+		Password:  form.Password,
+		CreatedAt: time.Now(),
 	}
+
+	fmt.Println("tacos 2")
+
 	if err := u.us.Create(&user); err != nil {
+
+		fmt.Println("tacos 3")
+
 		vd.SetAlert(err)
 		u.NewView.Render(w, r, vd)
 		return

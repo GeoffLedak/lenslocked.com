@@ -2,6 +2,8 @@ package models
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -74,15 +76,15 @@ type UserDB interface {
 }
 
 type User struct {
-	ID           primitive.ObjectID `bson:"_id"`
-	Name         string             `bson:"name"`
-	Email        string             `bson:"email"`
-	Password     string             `bson:"password"`
-	PasswordHash string             `bson:"passwordHash"`
-	Remember     string             `bson:"remember"`
-	RememberHash string             `bson:"rememberHash"`
-	CreatedAt    time.Time          `bson:"created_at"`
-	UpdatedAt    time.Time          `bson:"updated_at"`
+	ID           primitive.ObjectID
+	Name         string
+	Email        string
+	Password     string
+	PasswordHash string
+	Remember     string
+	RememberHash string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // UserService is a set of methods used to manipulate and
@@ -207,8 +209,27 @@ func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 // Create will create the provided user and backfill data
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (ug *userGorm) Create(user *User) error {
+
+	fmt.Println("I like cheeseee")
+	// log.Fatal("fucker")
+
 	collection := ug.db.Database("lenslocked_dev").Collection("users")
-	_, err := collection.InsertOne(context.TODO(), user)
+	result, err := collection.InsertOne(context.TODO(), user)
+
+	if err == nil {
+		fmt.Println("\n\nerr is nil. yay!\n\n")
+	} else {
+		log.Fatal(err)
+	}
+
+	if result == nil {
+		fmt.Sprintln("\n\nresult is nil")
+	} else {
+		fmt.Println("\n\n"+"%v", result)
+	}
+
+	// log.Fatal("\n\nSandwich!\n\n" + err + "\n\n" + result + "\n\n")
+
 	return err
 }
 
@@ -273,6 +294,7 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
+/*
 // Create will create the provided user and backfill data
 // like the ID, CreatedAt, and UpdatedAt fields.
 func (uv *userValidator) Create(user *User) error {
@@ -294,6 +316,7 @@ func (uv *userValidator) Create(user *User) error {
 	}
 	return uv.UserDB.Create(user)
 }
+*/
 
 // Update will hash a remember token if it is provided.
 func (uv *userValidator) Update(user *User) error {
